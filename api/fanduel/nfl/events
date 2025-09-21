@@ -1,0 +1,27 @@
+// /api/fanduel/nfl/events.js  — list upcoming NFL events (to get eventId)
+export default async function handler(req, res) {
+  try {
+    const ODDS_API_KEY = process.env.ODDS_API_KEY;
+    if (!ODDS_API_KEY) return res.status(500).json({ error: "Missing ODDS_API_KEY env var" });
+
+    const url = new URL("https://api.the-odds-api.com/v4/sports/americanfootball_nfl/events");
+    url.searchParams.set("apiKey", ODDS_API_KEY);
+    url.searchParams.set("dateFormat", "iso");
+
+    const r = await fetch(url.toString());
+    if (!r.ok) return res.status(r.status).json({ error: "Upstream " + r.status, body: await r.text() });
+
+    const events = await r.json();
+    // keep just the essentials
+    const slim = events.map(e => ({
+      id: e.id,
+      commence_time: e.commence_time,
+      home_team: e.home_team,
+      away_team: e.away_team,
+      sport_key: e.sport_key
+    }));
+    res.status(200).json(slim);
+  } catch (e) {
+    res.status(500).json({ error: e.message || "Unknown error" });
+  }
+}
